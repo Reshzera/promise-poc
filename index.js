@@ -1,7 +1,5 @@
-// Utility: sleep (simulates I/O delay)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Utility: simulates an async operation that may fail
 function fakeIO(name, ms, failRate = 0.0) {
   return new Promise(async (resolve, reject) => {
     await sleep(ms);
@@ -128,68 +126,6 @@ async function demoTimeout() {
   }
 }
 
-// 7) Retry with simple backoff
-async function retry(fn, { retries = 3, delayMs = 200 } = {}) {
-  let lastError;
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await fn(attempt);
-    } catch (error) {
-      lastError = error;
-      const waitTime = delayMs * attempt;
-      console.log(
-        `attempt ${attempt} failed: ${error.message} | waiting ${waitTime}ms`,
-      );
-      await sleep(waitTime);
-    }
-  }
-
-  throw lastError;
-}
-
-async function demoRetry() {
-  console.log("\n=== 7) Retry with backoff ===");
-
-  try {
-    const result = await retry(() => fakeIO("unstable", 150, 0.65), {
-      retries: 4,
-      delayMs: 150,
-    });
-    console.log("success after retry:", result);
-  } catch (error) {
-    console.error("failed after retries:", error.message);
-  }
-}
-
-// 8) Mini pipeline (sequential + parallel)
-async function demoPipeline() {
-  console.log("\n=== 8) Pipeline: fetch -> process -> save ===");
-
-  // 1) Fetch (sequential)
-  const fetched = await fakeIO("fetch-data", 200);
-  console.log("fetched:", fetched.name);
-
-  // 2) Process in parallel
-  const [part1, part2] = await Promise.all([
-    fakeIO("process-part-1", 250),
-    fakeIO("process-part-2", 300),
-  ]);
-
-  console.log("processed:", part1.name, part2.name);
-
-  // 3) Save (sequential)
-  const saved = await fakeIO("save", 150);
-  console.log("saved:", saved.name);
-
-  return {
-    fetched,
-    processed: [part1, part2],
-    saved,
-  };
-}
-
-// Runner
 (async function main() {
   console.log("POC: Promises & async/await - Node.js");
 
@@ -203,14 +139,6 @@ async function demoPipeline() {
   await demoAllSettled();
   await demoRace();
   await demoTimeout();
-  await demoRetry();
-
-  const pipeline = await demoPipeline();
-  console.log("final pipeline result:", {
-    fetched: pipeline.fetched.name,
-    processed: pipeline.processed.map((p) => p.name),
-    saved: pipeline.saved.name,
-  });
 
   console.log("\nDone ✅");
 })();
